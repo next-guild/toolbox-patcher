@@ -30,9 +30,3 @@ Then run:
 ```powershell
 .\update-toolbox.ps1
 ```
-
-## Requirements
-
-- Windows PowerShell
-- Internet access to GitHub
-- Run from the GW Toolbox root folder containing the computer-named user folder and `GWToolbox.ini`
