@@ -2,7 +2,10 @@
 # This script updates GW Toolbox components from GitHub releases
 # Run this from the GW Toolbox root folder (gwtoolboxpp)
 
-param()
+param(
+    [Parameter(Position = 0)]
+    [string]$Version
+)
 
 # Function to get version from ini file
 function Get-DllVersion {
@@ -45,13 +48,30 @@ try {
     $iniPath = Join-Path $userFolder "GWToolbox.ini"
 
     # Check if running from toolbox folder
-    if (!(Test-Path $iniPath)) {
-        throw "GWToolbox.ini not found in $userFolder. Please run this script from the GW Toolbox root folder."
+    if (!(Test-Path $userFolder)) {
+        throw "$userFolder not found. Please run this script from the GW Toolbox root folder."
     }
 
-    # Get current version
-    $currentVersion = Get-DllVersion $iniPath
-    Write-Host "Current GW Toolbox version: $currentVersion"
+    # Get requested version, or fall back to the installed version.
+    $targetVersion = if ($null -eq $Version) { "" } else { $Version.Trim() }
+    if ([string]::IsNullOrWhiteSpace($targetVersion)) {
+        if (!(Test-Path $iniPath)) {
+            throw "GWToolbox.ini not found in $userFolder. Please run this script from the GW Toolbox root folder or provide a version, e.g. .\update-toolbox.ps1 8.26"
+        }
+
+        $targetVersion = Get-DllVersion $iniPath
+        Write-Host "No version provided. Using installed GW Toolbox version: $targetVersion"
+    } else {
+        if ($targetVersion -notmatch '^\d+\.\d+$') {
+            throw "Invalid version '$targetVersion'. Expected a version like 8.26"
+        }
+
+        Write-Host "Target GW Toolbox version: $targetVersion"
+        if (Test-Path $iniPath) {
+            $installedVersion = Get-DllVersion $iniPath
+            Write-Host "Installed GW Toolbox version: $installedVersion"
+        }
+    }
 
     # Check for more recent GW Toolbox version
     Write-Host "Checking for more recent GW Toolbox version..."
@@ -62,17 +82,16 @@ try {
         Sort-Object Version -Descending | Select-Object -First 1
     if ($latestRelease) {
         $latestTag = $latestRelease.Version.ToString()
-        $comparison = Compare-Versions $latestTag $currentVersion
+        $comparison = Compare-Versions $latestTag $targetVersion
         if ($comparison -gt 0) {
-            Write-Host "A newer GW Toolbox version is available: $latestTag (current: $currentVersion)"
-            # Optionally update to latest, but for now, proceed with current
+            Write-Host "A newer GW Toolbox version is available: $latestTag (target: $targetVersion)"
         } else {
-            Write-Host "GW Toolbox is up to date."
+            Write-Host "Target GW Toolbox version is up to date."
         }
     }
 
-    # Find GW release for exe using the current major version
-    $majorVersion = ($currentVersion -split '\.')[0]
+    # Find GW release for exe using the target major version
+    $majorVersion = ($targetVersion -split '\.')[0]
     $exeReleaseTag = "$majorVersion.0_Exe"
     Write-Host "Looking for GW Toolbox exe release tag $exeReleaseTag"
     $gwRelease = $gwReleases | Where-Object { $_.tag_name -eq $exeReleaseTag } | Select-Object -First 1
@@ -94,9 +113,9 @@ try {
     Write-Host "Checking TAS Toolbox releases..."
     $tasReleases = Invoke-RestMethod -Uri "https://api.github.com/repos/gwtasdevs/GWToolboxpp/releases"
     
-    # Find latest release matching the current version (either Release or Beta)
+    # Find latest release matching the target version (either Release or Beta)
     $matchingReleases = $tasReleases | Where-Object { 
-        $_.tag_name -match "^$([regex]::Escape($currentVersion))_(Release|Beta_[a-f0-9]+)$" 
+        $_.tag_name -match "^$([regex]::Escape($targetVersion))_(Release|Beta_[a-f0-9]+)$" 
     }
     
     # Sort by published date descending to get the latest one
@@ -152,7 +171,7 @@ try {
             Write-Host "Skipping plugin updates."
         }
     } else {
-        Write-Host "No TAS Toolbox release found for version $currentVersion"
+        Write-Host "No TAS Toolbox release found for version $targetVersion"
     }
 
     Write-Host "Update complete."

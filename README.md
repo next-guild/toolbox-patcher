@@ -14,10 +14,12 @@ The script reads the installed GW Toolbox version from `GWToolbox.ini`, checks G
 Place `update-toolbox.ps1` in the GW Toolbox root folder, then run it from that folder:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\update-toolbox.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\update-toolbox.ps1 8.26
 ```
 
 The `-ExecutionPolicy Bypass` flag applies only to that PowerShell process. It does not permanently change the user's execution policy.
+
+If no version is provided, the script uses the version from `GWToolbox.ini`.
 
 If Windows blocks the file because it was downloaded from the internet, unblock it once:
 
@@ -28,5 +30,5 @@ Unblock-File .\update-toolbox.ps1
 Then run:
 
 ```powershell
-.\update-toolbox.ps1
+.\update-toolbox.ps1 8.26
 ```
